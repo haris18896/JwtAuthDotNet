@@ -13,6 +13,9 @@
 dotnet watch run 
  # or 
 dotnet run
+
+openssl rand -base64 64 # to generate base 64 secret to use in the appsettings.json for generation of jwt tokens
+
 ```
 
 ```cs
@@ -41,6 +44,8 @@ app.Run();
 
 ```sh
 dotnet add package Scalar.AspNetCore --version 2.6.6 # easy way to render beautiful API References based on OpenAPI/Swagger documents
+dotnet add package System.IdentityModel.Tokens.Jwt --version 8.13.0 # this library simplifies working with OpenID Connect (OIDC), OAuth2.0, and JSON Web Tokens (JWT) in .NET.
+dotnet add package Microsoft.EntityFrameworkCore # Entity Framework Core (EF Core) is a modern object-database mapper that lets you build a clean, portable, and high-level data access layer with .NET (C#) across a variety of databases
 
 ```
 
@@ -159,6 +164,29 @@ namespace JwtAuth.Controllers
             string token = "success";
 
             return Ok(token);
+        }
+
+        private string CreateToken(User user)
+        {
+            // Here you would typically create a JWT token using the user's information
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.Name, user.Username),
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var tokenDescriptor = new JwtSecurityToken
+            (
+                issuer: configuration.GetValue<string>("AppSettings:Issuer"),
+                audience: configuration.GetValue<string>("AppSettings:Audience"),
+                expires: DateTime.Now.AddDays(1),
+                claims: claims,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+
         }
 }
  
