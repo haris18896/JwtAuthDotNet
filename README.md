@@ -44,6 +44,8 @@ dotnet add package Scalar.AspNetCore --version 2.6.6 # easy way to render beauti
 
 ```
 
+### Endpoints
+
 1. Registering Users
 
 * First of all we need 'Entity' to store our user in the data base for that we have created a directory `Entity`
