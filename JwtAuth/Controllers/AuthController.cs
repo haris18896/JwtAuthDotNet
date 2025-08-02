@@ -30,15 +30,16 @@ namespace JwtAuth.Controllers
         {
             Console.WriteLine(request);
             // Here you would typically validate the user against a database
+            if (string.IsNullOrEmpty(user.Username) || string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest("Username or Password cannot be empty");
+            }
+
             if (user.Username != request.Username)
             {
                 return BadRequest("User not Found");
             }
 
-            if (string.IsNullOrEmpty(user.Username) || string.IsNullOrEmpty(request.Password))
-            {
-                return BadRequest("Username or Password cannot be empty");
-            }
 
             if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
             {

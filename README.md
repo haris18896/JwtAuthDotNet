@@ -115,5 +115,54 @@ namespace JwtAuth.Controllers
 ```
 
 2. Logging them in
+* we need to check if either field is empty
+* We need to find the user
+* we need to verify the password
+
+##### Controllers
+```cs
+// Controllers/AuthController.cs
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using JwtAuth.Entities;
+using JwtAuth.Entities.Models;
+using Microsoft.AspNetCore.Identity;
+
+namespace JwtAuth.Controllers
+{
+// ....................
+// ....................
+// ....................
+// ....................
+// ....................
+        [HttpPost("login")]
+        public ActionResult<string> Login(UserDto request)
+        {
+            Console.WriteLine(request);
+            // Here you would typically validate the user against a database
+            if (string.IsNullOrEmpty(user.Username) || string.IsNullOrEmpty(request.Password))
+            {
+                return BadRequest("Username or Password cannot be empty");
+            }
+
+            if (user.Username != request.Username)
+            {
+                return BadRequest("User not Found");
+            }
+
+
+            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+            {
+                return BadRequest("Invalid Password");
+            }
+
+            string token = "success";
+
+            return Ok(token);
+        }
+}
+ 
+```
+
 3. Adding Roles
 4. Using Refresh Tokens
