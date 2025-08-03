@@ -9,6 +9,7 @@ using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using JwtAuth.Services;
 using Microsoft.AspNetCore.Authorization;
+using JwtAuth.Controllers.Data;
 
 namespace JwtAuth.Controllers
 {
@@ -30,15 +31,27 @@ namespace JwtAuth.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult<string>> Login(UserDto request)
+        public async Task<ActionResult<TokenResponseDto>> Login(UserDto request)
         {
-            var token = await authService.LoginAsync(request);
-            if (token is null)
+            var result = await authService.LoginAsync(request);
+            if (result is null)
             {
                 return Unauthorized("Invalid username or password");
             }
 
-            return Ok(token);
+            return Ok(result);
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<TokenResponseDto>> RefreshToken(TokenResponseRequestDto request)
+        {
+            var result = await authService.RefreshTokenAsync(request);
+            if (result is null || result.AccessToken is null || result.RefreshToken is null)
+            {
+                return Unauthorized("Invalid or expired refresh token");
+            }
+
+            return Ok(result);
         }
 
         [Authorize]
@@ -54,5 +67,6 @@ namespace JwtAuth.Controllers
         {
             return Ok("You are Admin");
         }
+
     }
 }

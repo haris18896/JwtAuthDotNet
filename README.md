@@ -377,11 +377,21 @@ namespace JwtAuth.Controllers
 * For the Autheticated Endpoints add the below code to the AuthController of that specific endpoint
 ```cs
 // Controller
-[Authorize]
+// ...........
+// ...........
+// ...........
+        [Authorize]
         [HttpGet]
         public IActionResult AuthenticatedOnlyEndpoints()
         {
             return Ok("This endpoint is protected and requires authentication.");
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin-only")]
+        public IActionResult AdminOnlyEndpoints()
+        {
+            return Ok("You are Admin");
         }
 ```
 
