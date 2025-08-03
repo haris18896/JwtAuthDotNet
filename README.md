@@ -13,6 +13,9 @@
 dotnet watch run 
  # or 
 dotnet run
+dotnet list package # all packages are in `.csproj`
+dotnet restore # install all packages
+dotnet build # build project
 
 openssl rand -base64 64 # to generate base 64 secret to use in the appsettings.json for generation of jwt tokens
 
