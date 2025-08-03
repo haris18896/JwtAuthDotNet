@@ -77,6 +77,7 @@ dotnet add package Microsoft.EntityFrameworkCore # Entity Framework Core (EF Cor
 
 dotnet add package Microsoft.EntityFrameworkCore.Tools
 dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
 
 ```
 
@@ -222,6 +223,194 @@ namespace JwtAuth.Controllers
 }
  
 ```
+
+
+### Registration & Login With Database
+* Until now what we have done above is not connected with database, we will need Services to properly connect with the database and then fetch the user from there
+* for that we need the `IAuthService` and `AuthService` in the `services` directory
+* We will move the above controller logics to the Service and then in the contrller we will be calling the services from database
+
+```cs
+// IAuthService
+using JwtAuth.Entities;
+using JwtAuth.Entities.Models;
+
+namespace JwtAuth.Services
+{
+    public interface IAuthService
+    {
+        Task<User> RegisterAsync(UserDto request);
+        Task<string> LoginAsync(UserDto request);
+    }
+}
+```
+
+```cs
+// AuthService
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using JwtAuth.Controllers.Data;
+using JwtAuth.Entities;
+using JwtAuth.Entities.Models;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+
+namespace JwtAuth.Services
+{
+    public class AuthService(UserDbContext context, IConfiguration configuration) : IAuthService
+    {
+        public async Task<string?> LoginAsync(UserDto request)
+        {
+            var user = await context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
+
+            // Implementation for user login
+            if (user is null)
+            {
+                return null; // User not found
+            }
+
+            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
+            {
+                return null; // Invalid Password
+            }
+
+            return CreateToken(user);
+        }
+
+        public async Task<User> RegisterAsync(UserDto request)
+        {
+            if (await context.Users.AnyAsync(u => u.Username == request.Username))
+            {
+                return null; // User already exists
+            }
+
+            var user = new User();
+            // Implementation for user registration
+            var hashedPassword = new PasswordHasher<User>()
+             .HashPassword(user, request.Password);
+
+            user.Username = request.Username;
+            user.PasswordHash = hashedPassword;
+
+            context.Users.Add(user);
+            await context.SaveChangesAsync();
+
+            return user;
+        }
+
+        private string CreateToken(User user)
+        {
+            // Here you would typically create a JWT token using the user's information
+            var claims = new List<Claim>
+            {
+                new(ClaimTypes.Name, user.Username),
+                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+            var tokenDescriptor = new JwtSecurityToken
+            (
+                issuer: configuration.GetValue<string>("AppSettings:Issuer"),
+                audience: configuration.GetValue<string>("AppSettings:Audience"),
+                expires: DateTime.Now.AddDays(1),
+                claims: claims,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
+        }
+    }
+}
+```
+
+```cs
+// AuthController.cs
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
+using JwtAuth.Entities;
+using JwtAuth.Entities.Models;
+using Microsoft.AspNetCore.Identity;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
+using System.IdentityModel.Tokens.Jwt;
+using JwtAuth.Services;
+
+namespace JwtAuth.Controllers
+{
+
+    [Route("api/[controller]")]
+    [ApiController]
+    public class AuthController(IAuthService authService) : ControllerBase
+    {
+        [HttpPost("register")]
+        public async Task<ActionResult<User>> Register(UserDto request)
+        {
+            var user = await authService.RegisterAsync(request);
+            if (user is null)
+            {
+                return BadRequest("User already exists");
+            }
+
+            return Ok(user);
+        }
+
+        [HttpPost("login")]
+        public async Task<ActionResult<string>> Login(UserDto request)
+        {
+            var token = await authService.LoginAsync(request);
+            if (token is null)
+            {
+                return Unauthorized("Invalid username or password");
+            }
+
+            return Ok(token);
+        }
+
+    }
+}
+```
+
+* For the Autheticated Endpoints add the below code to the AuthController of that specific endpoint
+```cs
+// Controller
+[Authorize]
+        [HttpGet]
+        public IActionResult AuthenticatedOnlyEndpoints()
+        {
+            return Ok("This endpoint is protected and requires authentication.");
+        }
+```
+
+* and then in the `program.cs` we need to add builder for authentication and authorization
+```cs
+// Program.cs
+// ..............
+// ..............
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["AppSettings:Issuer"],
+            ValidAudience = builder.Configuration["AppSettings:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]!)),
+        };
+    });
+
+// ..............
+// ..............
+// ..............
+app.UseAuthorization();
+```
+
 
 3. Adding Roles
 4. Using Refresh Tokens

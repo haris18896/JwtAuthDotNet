@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using JwtAuth.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace JwtAuth.Controllers
 {
@@ -40,5 +41,18 @@ namespace JwtAuth.Controllers
             return Ok(token);
         }
 
+        [Authorize]
+        [HttpGet]
+        public IActionResult AuthenticatedOnlyEndpoints()
+        {
+            return Ok("You are authenticated!");
+        }
+
+        [Authorize(Roles = "Admin")]
+        [HttpGet("admin-only")]
+        public IActionResult AdminOnlyEndpoints()
+        {
+            return Ok("You are Admin");
+        }
     }
 }
