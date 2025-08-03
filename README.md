@@ -1,405 +1,159 @@
-# JwtAuthDotNet
+# JWT Authentication with ASP.NET Core
 
-* We are going to use JasonWeb token for authetication in ASP.net
-* The features included are given below
+A comprehensive guide to implementing JWT (JSON Web Token) authentication in ASP.NET Core with Entity Framework Core, including user registration, login, role-based authorization, and refresh tokens.
 
-1. Run your Project, alwasy reload after chagnes
-2. add controller support to `program.cs` and map the controllers
-3. `http://localhost:5008/openapi/v1.json` for checking json apis
-4. `http://localhost:5008/scalar/v1` fro checking swagger
+## 📋 Table of Contents
 
-```sh
-# Start your project
-dotnet watch run 
- # or 
-dotnet run
-dotnet list package # all packages are in `.csproj`
-dotnet restore # install all packages
-dotnet build # build project
+- [Project Overview](#project-overview)
+- [Quick Start](#quick-start)
+- [Project Structure](#project-structure)
+- [Setup & Configuration](#setup--configuration)
+- [Core Components](#core-components)
+- [Authentication Flow](#authentication-flow)
+- [API Endpoints](#api-endpoints)
+- [Database Integration](#database-integration)
+- [Security Features](#security-features)
+- [Testing](#testing)
 
-openssl rand -base64 64 # to generate base 64 secret to use in the appsettings.json for generation of jwt tokens
+## 🎯 Project Overview
 
+This project demonstrates a complete JWT authentication system with the following features:
+
+- ✅ User registration and login
+- ✅ JWT token generation and validation
+- ✅ Password hashing with ASP.NET Core Identity
+- ✅ Role-based authorization
+- ✅ Refresh token mechanism
+- ✅ Entity Framework Core with SQL Server
+- ✅ OpenAPI/Swagger documentation
+
+## 🚀 Quick Start
+
+### Prerequisites
+- .NET 8.0 SDK
+- Docker (for SQL Server)
+- SQL Server Management Studio (optional)
+
+### 1. Clone and Setup
+```bash
+# Navigate to project directory
+cd JwtAuthDotNet/JwtAuth
+
+# Install dependencies
+dotnet restore
+
+# Build the project
+dotnet build
+```
+
+### 2. Database Setup
+```bash
+# Start SQL Server in Docker
+docker run -e "ACCEPT_EULA=Y" -e 'SA_PASSWORD=StrongP@ssw0rd!' \
+  --platform linux/amd64 -p 1433:1433 \
+  --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+
+# Install Entity Framework tools
 dotnet tool install --global dotnet-ef
+
+# Create and apply migrations
 dotnet ef migrations add Initial
 dotnet ef database update
-
 ```
 
-* Create a SQL server in docker
-```sh
-docker run -e "ACCEPT_EULA=Y" -e 'SA_PASSWORD=StrongP@ssw0rd!' --platform linux/amd64 -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+### 3. Generate JWT Secret
+```bash
+# Generate a secure secret for JWT signing
+openssl rand -base64 64
 ```
 
-* The use this in the `appsettings.json`
+### 4. Configure Settings
+Update `appsettings.json` with your generated secret:
+
 ```json
 {
-
-"ConnectionStrings": {
-  "DefaultConnection": "Server=localhost,1433;Database=JwtAuthDb;User Id=sa;Password=StrongP@ssw0rd!;TrustServerCertificate=True;"
-},
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=localhost,1433;Database=JwtAuthDb;User Id=sa;Password=StrongP@ssw0rd!;TrustServerCertificate=True;"
+  },
   "AppSettings": {
-    "Token": "uf/UXIEkwBTLZTHZQqBTTWHxZj4g2WW8KeAEYMZFhKBIZSiyCo1283zg1tneGTPb3B4N1JkG8/JkHjp+u1zgqg==",
-    "Issuer": "haris18896",
-    "Audience": "haris18896"
+    "Token": "YOUR_GENERATED_SECRET_HERE",
+    "Issuer": "your-app-name",
+    "Audience": "your-app-name"
   }
 }
 ```
 
-```cs
-// .........
-// 🔧 Add controller support
-builder.Services.AddControllers();
+### 5. Run the Application
+```bash
+# Development mode with hot reload
+dotnet watch run
 
-// 🔧 Add OpenAPI support
-builder.Services.AddOpenApi();  // you can add version param to this as well e.g // 🔧 builder.Services.AddOpenApi("v2");
-builder.Services.AddDbContext<UserDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); // database connection
-// ........
-// ........
-// ........
-// ........
-
-// 🔧 Register controller endpoints
-app.MapControllers();
-
-app.Run();
+# Or standard run
+dotnet run
 ```
 
+### 6. Access the API
+- **API Documentation**: `http://localhost:5008/scalar/v1`
+- **OpenAPI JSON**: `http://localhost:5008/openapi/v1.json`
+- **Base URL**: `http://localhost:5008/api/auth`
 
+## 📁 Project Structure
 
-### All Packages Required
-* we aren't working in the VS, thats why we need to download the packages using terminal
-* to check all the pacakges go to this link [NuGet Packages](https://www.nuget.org/PACKAGES)
+```
+JwtAuth/
+├── Controllers/
+│   ├── AuthController.cs          # Authentication endpoints
+│   └── Data/
+│       ├── UserDbContext.cs       # Database context
+│       ├── TokenResponseDto.cs    # Token response model
+│       └── RefreshTokenRequestDto.cs
+├── Entities/
+│   ├── User.cs                    # User entity model
+│   └── Models/
+│       └── UserDto.cs             # User data transfer object
+├── Services/
+│   ├── IAuthService.cs            # Authentication service interface
+│   └── AuthService.cs             # Authentication service implementation
+├── Migrations/                    # Entity Framework migrations
+├── Program.cs                     # Application configuration
+└── appsettings.json              # Configuration settings
+```
 
-```sh
-dotnet add package Scalar.AspNetCore --version 2.6.6 # easy way to render beautiful API References based on OpenAPI/Swagger documents
-dotnet add package System.IdentityModel.Tokens.Jwt --version 8.13.0 # this library simplifies working with OpenID Connect (OIDC), OAuth2.0, and JSON Web Tokens (JWT) in .NET.
-dotnet add package Microsoft.EntityFrameworkCore # Entity Framework Core (EF Core) is a modern object-database mapper that lets you build a clean, portable, and high-level data access layer with .NET (C#) across a variety of databases
+## ⚙️ Setup & Configuration
 
-dotnet add package Microsoft.EntityFrameworkCore.Tools
+### Required NuGet Packages
+
+```bash
+# Core packages
+dotnet add package Microsoft.EntityFrameworkCore
 dotnet add package Microsoft.EntityFrameworkCore.SqlServer
+dotnet add package Microsoft.EntityFrameworkCore.Tools
+
+# Authentication & JWT
 dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+dotnet add package System.IdentityModel.Tokens.Jwt
 
+# API Documentation
+dotnet add package Scalar.AspNetCore
 ```
 
-### Endpoints
+### Program.cs Configuration
 
-1. Registering Users
+```csharp
+var builder = WebApplication.CreateBuilder(args);
 
-* First of all we need 'Entity' to store our user in the data base for that we have created a directory `Entity`
-* secondly we need `DTO (data transfer object)` to store the user
-* thirdly we need an endpoint for that we have created `Controllers` directory
+// Add services
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
 
+// Database context
+builder.Services.AddDbContext<UserDbContext>(options => 
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-#### Entities
-```cs
-// Entities/User.cs
-namespace JwtAuth.Entities
-{
-    public class User
-    {
-        public string Username { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-    }
-}
+// Authentication service
+builder.Services.AddScoped<IAuthService, AuthService>();
 
-```
-
-#### Entity Model (DTO)
-```cs
-// Entities/Models/UserDto.cs
-namespace JwtAuth.Entities.Models
-{
-    public class UserDto
-    {
-        public string Username { get; set; } = string.Empty;
-        public string Password { get; set; } = string.Empty;
-    }
-}
-```
-
-#### Controller
-```cs
-// Controller/AuthController.cs
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using JwtAuth.Entities;
-using JwtAuth.Entities.Models;
-using Microsoft.AspNetCore.Identity;
-
-namespace JwtAuth.Controllers
-{
-
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AuthController : ControllerBase
-    {
-        public static User user = new();
-        [HttpPost("register")]
-        public ActionResult<User> Register(UserDto request)
-        {
-            // Here you would typically add logic to save the user to a database
-            var hashedPassword = new PasswordHasher<User>()
-             .HashPassword(user, request.Password);
-
-            user.Username = request.Username;
-            user.PasswordHash = hashedPassword;
-
-            return Ok(user);
-        }
-    }
-}
-
-```
-
-2. Logging them in
-* we need to check if either field is empty
-* We need to find the user
-* we need to verify the password
-
-##### Controllers
-```cs
-// Controllers/AuthController.cs
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using JwtAuth.Entities;
-using JwtAuth.Entities.Models;
-using Microsoft.AspNetCore.Identity;
-
-namespace JwtAuth.Controllers
-{
-// ....................
-// ....................
-// ....................
-// ....................
-// ....................
-        [HttpPost("login")]
-        public ActionResult<string> Login(UserDto request)
-        {
-            Console.WriteLine(request);
-            // Here you would typically validate the user against a database
-            if (string.IsNullOrEmpty(user.Username) || string.IsNullOrEmpty(request.Password))
-            {
-                return BadRequest("Username or Password cannot be empty");
-            }
-
-            if (user.Username != request.Username)
-            {
-                return BadRequest("User not Found");
-            }
-
-
-            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
-            {
-                return BadRequest("Invalid Password");
-            }
-
-            string token = "success";
-
-            return Ok(token);
-        }
-
-        private string CreateToken(User user)
-        {
-            // Here you would typically create a JWT token using the user's information
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.Name, user.Username),
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-            var tokenDescriptor = new JwtSecurityToken
-            (
-                issuer: configuration.GetValue<string>("AppSettings:Issuer"),
-                audience: configuration.GetValue<string>("AppSettings:Audience"),
-                expires: DateTime.Now.AddDays(1),
-                claims: claims,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
-
-        }
-}
- 
-```
-
-
-### Registration & Login With Database
-* Until now what we have done above is not connected with database, we will need Services to properly connect with the database and then fetch the user from there
-* for that we need the `IAuthService` and `AuthService` in the `services` directory
-* We will move the above controller logics to the Service and then in the contrller we will be calling the services from database
-
-```cs
-// IAuthService
-using JwtAuth.Entities;
-using JwtAuth.Entities.Models;
-
-namespace JwtAuth.Services
-{
-    public interface IAuthService
-    {
-        Task<User> RegisterAsync(UserDto request);
-        Task<string> LoginAsync(UserDto request);
-    }
-}
-```
-
-```cs
-// AuthService
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using JwtAuth.Controllers.Data;
-using JwtAuth.Entities;
-using JwtAuth.Entities.Models;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-
-namespace JwtAuth.Services
-{
-    public class AuthService(UserDbContext context, IConfiguration configuration) : IAuthService
-    {
-        public async Task<string?> LoginAsync(UserDto request)
-        {
-            var user = await context.Users.FirstOrDefaultAsync(u => u.Username == request.Username);
-
-            // Implementation for user login
-            if (user is null)
-            {
-                return null; // User not found
-            }
-
-            if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password) == PasswordVerificationResult.Failed)
-            {
-                return null; // Invalid Password
-            }
-
-            return CreateToken(user);
-        }
-
-        public async Task<User> RegisterAsync(UserDto request)
-        {
-            if (await context.Users.AnyAsync(u => u.Username == request.Username))
-            {
-                return null; // User already exists
-            }
-
-            var user = new User();
-            // Implementation for user registration
-            var hashedPassword = new PasswordHasher<User>()
-             .HashPassword(user, request.Password);
-
-            user.Username = request.Username;
-            user.PasswordHash = hashedPassword;
-
-            context.Users.Add(user);
-            await context.SaveChangesAsync();
-
-            return user;
-        }
-
-        private string CreateToken(User user)
-        {
-            // Here you would typically create a JWT token using the user's information
-            var claims = new List<Claim>
-            {
-                new(ClaimTypes.Name, user.Username),
-                new(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            };
-
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.GetValue<string>("AppSettings:Token")!));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
-            var tokenDescriptor = new JwtSecurityToken
-            (
-                issuer: configuration.GetValue<string>("AppSettings:Issuer"),
-                audience: configuration.GetValue<string>("AppSettings:Audience"),
-                expires: DateTime.Now.AddDays(1),
-                claims: claims,
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(tokenDescriptor);
-        }
-    }
-}
-```
-
-```cs
-// AuthController.cs
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Http;
-using JwtAuth.Entities;
-using JwtAuth.Entities.Models;
-using Microsoft.AspNetCore.Identity;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-using System.IdentityModel.Tokens.Jwt;
-using JwtAuth.Services;
-
-namespace JwtAuth.Controllers
-{
-
-    [Route("api/[controller]")]
-    [ApiController]
-    public class AuthController(IAuthService authService) : ControllerBase
-    {
-        [HttpPost("register")]
-        public async Task<ActionResult<User>> Register(UserDto request)
-        {
-            var user = await authService.RegisterAsync(request);
-            if (user is null)
-            {
-                return BadRequest("User already exists");
-            }
-
-            return Ok(user);
-        }
-
-        [HttpPost("login")]
-        public async Task<ActionResult<string>> Login(UserDto request)
-        {
-            var token = await authService.LoginAsync(request);
-            if (token is null)
-            {
-                return Unauthorized("Invalid username or password");
-            }
-
-            return Ok(token);
-        }
-
-    }
-}
-```
-
-* For the Autheticated Endpoints add the below code to the AuthController of that specific endpoint
-```cs
-// Controller
-// ...........
-// ...........
-// ...........
-        [Authorize]
-        [HttpGet]
-        public IActionResult AuthenticatedOnlyEndpoints()
-        {
-            return Ok("This endpoint is protected and requires authentication.");
-        }
-
-        [Authorize(Roles = "Admin")]
-        [HttpGet("admin-only")]
-        public IActionResult AdminOnlyEndpoints()
-        {
-            return Ok("You are Admin");
-        }
-```
-
-* and then in the `program.cs` we need to add builder for authentication and authorization
-```cs
-// Program.cs
-// ..............
-// ..............
+// JWT Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -411,16 +165,378 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["AppSettings:Issuer"],
             ValidAudience = builder.Configuration["AppSettings:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]!)),
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["AppSettings:Token"]!)),
         };
     });
 
-// ..............
-// ..............
-// ..............
+var app = builder.Build();
+
+// Middleware pipeline
+app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
+app.MapControllers();
 ```
 
+## 🏗️ Core Components
 
-3. Adding Roles
-4. Using Refresh Tokens
+### 1. User Entity Model
+
+```csharp
+// Entities/User.cs
+namespace JwtAuth.Entities
+{
+    public class User
+    {
+        public Guid Id { get; set; }
+        public string Username { get; set; } = string.Empty;
+        public string PasswordHash { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string? RefreshToken { get; set; }
+        public DateTime RefreshTokenExpiryTime { get; set; }
+    }
+}
+```
+
+### 2. Data Transfer Objects (DTOs)
+
+```csharp
+// Entities/Models/UserDto.cs
+namespace JwtAuth.Entities.Models
+{
+    public class UserDto
+    {
+        public string Username { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+    }
+}
+
+// Controllers/Data/TokenResponseDto.cs
+namespace JwtAuth.Controllers.Data
+{
+    public class TokenResponseDto
+    {
+        public required string AccessToken { get; set; }
+        public required string RefreshToken { get; set; }
+    }
+}
+```
+
+### 3. Database Context
+
+```csharp
+// Controllers/Data/UserDbContext.cs
+using JwtAuth.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace JwtAuth.Controllers.Data
+{
+    public class UserDbContext(DbContextOptions<UserDbContext> options) : DbContext(options)
+    {
+        public DbSet<User> Users { get; set; } = null!;
+    }
+}
+```
+
+### 4. Authentication Service Interface
+
+```csharp
+// Services/IAuthService.cs
+using JwtAuth.Entities;
+using JwtAuth.Entities.Models;
+using JwtAuth.Controllers.Data;
+
+namespace JwtAuth.Services
+{
+    public interface IAuthService
+    {
+        Task<User> RegisterAsync(UserDto request);
+        Task<TokenResponseDto?> LoginAsync(UserDto request);
+        Task<TokenResponseDto?> RefreshTokenAsync(TokenResponseRequestDto request);
+    }
+}
+```
+
+## 🔐 Authentication Flow
+
+### 1. User Registration Flow
+
+```mermaid
+sequenceDiagram
+    Client->>AuthController: POST /api/auth/register
+    AuthController->>AuthService: RegisterAsync(request)
+    AuthService->>Database: Check if user exists
+    AuthService->>AuthService: Hash password
+    AuthService->>Database: Save user
+    AuthService->>AuthController: Return user
+    AuthController->>Client: 200 OK + User data
+```
+
+### 2. User Login Flow
+
+```mermaid
+sequenceDiagram
+    Client->>AuthController: POST /api/auth/login
+    AuthController->>AuthService: LoginAsync(request)
+    AuthService->>Database: Find user by username
+    AuthService->>AuthService: Verify password hash
+    AuthService->>AuthService: Generate JWT token
+    AuthService->>AuthService: Generate refresh token
+    AuthService->>Database: Save refresh token
+    AuthService->>AuthController: Return tokens
+    AuthController->>Client: 200 OK + Tokens
+```
+
+### 3. Token Refresh Flow
+
+```mermaid
+sequenceDiagram
+    Client->>AuthController: POST /api/auth/refresh-token
+    AuthController->>AuthService: RefreshTokenAsync(request)
+    AuthService->>Database: Validate refresh token
+    AuthService->>AuthService: Generate new tokens
+    AuthService->>Database: Update refresh token
+    AuthService->>AuthController: Return new tokens
+    AuthController->>Client: 200 OK + New tokens
+```
+
+## 🌐 API Endpoints
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description | Request Body | Response |
+|--------|----------|-------------|--------------|----------|
+| POST | `/api/auth/register` | Register new user | `UserDto` | `User` |
+| POST | `/api/auth/login` | User login | `UserDto` | `TokenResponseDto` |
+| POST | `/api/auth/refresh-token` | Refresh access token | `TokenResponseRequestDto` | `TokenResponseDto` |
+
+### Protected Endpoints
+
+| Method | Endpoint | Description | Authorization |
+|--------|----------|-------------|---------------|
+| GET | `/api/auth` | Test authenticated access | `Bearer Token` |
+| GET | `/api/auth/admin-only` | Admin-only endpoint | `Bearer Token + Admin Role` |
+
+### Example API Calls
+
+#### Register User
+```bash
+curl -X POST "http://localhost:5008/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john_doe",
+    "password": "securepassword123"
+  }'
+```
+
+#### Login User
+```bash
+curl -X POST "http://localhost:5008/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "john_doe",
+    "password": "securepassword123"
+  }'
+```
+
+#### Access Protected Endpoint
+```bash
+curl -X GET "http://localhost:5008/api/auth" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+#### Refresh Token
+```bash
+curl -X POST "http://localhost:5008/api/auth/refresh-token" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "user-guid-here",
+    "refreshToken": "refresh-token-here"
+  }'
+```
+
+## 🗄️ Database Integration
+
+### Entity Framework Migrations
+
+```bash
+# Create initial migration
+dotnet ef migrations add Initial
+
+# Apply migrations to database
+dotnet ef database update
+
+# Remove last migration (if needed)
+dotnet ef migrations remove
+
+# Generate SQL script
+dotnet ef migrations script
+```
+
+### Database Schema
+
+The application creates a `Users` table with the following structure:
+
+```sql
+CREATE TABLE [Users] (
+    [Id] uniqueidentifier NOT NULL,
+    [Username] nvarchar(max) NOT NULL,
+    [PasswordHash] nvarchar(max) NOT NULL,
+    [Role] nvarchar(max) NOT NULL,
+    [RefreshToken] nvarchar(max) NULL,
+    [RefreshTokenExpiryTime] datetime2 NOT NULL,
+    CONSTRAINT [PK_Users] PRIMARY KEY ([Id])
+);
+```
+
+## 🔒 Security Features
+
+### 1. Password Hashing
+Uses ASP.NET Core Identity's `PasswordHasher` for secure password storage:
+
+```csharp
+// Hashing password during registration
+var hashedPassword = new PasswordHasher<User>().HashPassword(user, request.Password);
+
+// Verifying password during login
+var result = new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, request.Password);
+if (result == PasswordVerificationResult.Failed)
+{
+    return null; // Invalid password
+}
+```
+
+### 2. JWT Token Security
+- **Algorithm**: HMAC SHA512
+- **Expiration**: 1 day for access tokens
+- **Claims**: Username, User ID, Role
+- **Validation**: Issuer, Audience, Lifetime, Signing Key
+
+### 3. Refresh Token Security
+- **Expiration**: 7 days
+- **Storage**: Database with user association
+- **Generation**: Cryptographically secure random bytes
+- **Validation**: User ID + token + expiry check
+
+### 4. Role-Based Authorization
+```csharp
+[Authorize] // Requires valid JWT token
+[HttpGet]
+public IActionResult AuthenticatedOnlyEndpoints()
+{
+    return Ok("You are authenticated!");
+}
+
+[Authorize(Roles = "Admin")] // Requires Admin role
+[HttpGet("admin-only")]
+public IActionResult AdminOnlyEndpoints()
+{
+    return Ok("You are Admin");
+}
+```
+
+## 🧪 Testing
+
+### Manual Testing with curl
+
+1. **Register a new user**:
+```bash
+curl -X POST "http://localhost:5008/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "testpass"}'
+```
+
+2. **Login and get tokens**:
+```bash
+curl -X POST "http://localhost:5008/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "testuser", "password": "testpass"}'
+```
+
+3. **Test protected endpoint**:
+```bash
+curl -X GET "http://localhost:5008/api/auth" \
+  -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
+```
+
+### Testing with Swagger/Scalar
+
+1. Open `http://localhost:5008/scalar/v1` in your browser
+2. Use the interactive API documentation
+3. Test endpoints directly from the UI
+
+## 📚 Key Learning Points
+
+### 1. JWT Token Structure
+- **Header**: Algorithm and token type
+- **Payload**: Claims (user info, expiration, etc.)
+- **Signature**: Verifies token authenticity
+
+### 2. Authentication vs Authorization
+- **Authentication**: Verifying user identity (login)
+- **Authorization**: Checking user permissions (roles)
+
+### 3. Token Types
+- **Access Token**: Short-lived, for API access
+- **Refresh Token**: Long-lived, for getting new access tokens
+
+### 4. Security Best Practices
+- Never store sensitive data in JWT payload
+- Use HTTPS in production
+- Implement token expiration
+- Validate all token claims
+- Use secure random secrets
+
+## 🚨 Common Issues & Solutions
+
+### 1. Database Connection Issues
+```bash
+# Check if SQL Server is running
+docker ps
+
+# Restart SQL Server container
+docker restart sqlserver
+
+# Check connection string in appsettings.json
+```
+
+### 2. JWT Token Issues
+```bash
+# Verify secret in appsettings.json
+# Ensure secret is at least 64 characters
+# Check issuer and audience values
+```
+
+### 3. Migration Issues
+```bash
+# Remove existing migrations and recreate
+dotnet ef migrations remove
+dotnet ef migrations add Initial
+dotnet ef database update
+```
+
+## 🔄 Development Workflow
+
+1. **Make changes** to entities, services, or controllers
+2. **Create migration** if database schema changes:
+   ```bash
+   dotnet ef migrations add MigrationName
+   ```
+3. **Update database**:
+   ```bash
+   dotnet ef database update
+   ```
+4. **Test endpoints** using curl or Swagger
+5. **Monitor logs** for any errors
+
+## 📖 Additional Resources
+
+- [JWT.io](https://jwt.io/) - JWT token decoder and debugger
+- [ASP.NET Core Authentication](https://docs.microsoft.com/en-us/aspnet/core/security/authentication/)
+- [Entity Framework Core](https://docs.microsoft.com/en-us/ef/core/)
+- [JWT Bearer Authentication](https://docs.microsoft.com/en-us/aspnet/core/security/authentication/jwt-authn)
+
+---
+
+**Happy Coding! 🚀**
