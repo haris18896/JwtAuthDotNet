@@ -19,6 +19,30 @@ dotnet build # build project
 
 openssl rand -base64 64 # to generate base 64 secret to use in the appsettings.json for generation of jwt tokens
 
+dotnet tool install --global dotnet-ef
+dotnet ef migrations add Initial
+dotnet ef database update
+
+```
+
+* Create a SQL server in docker
+```sh
+docker run -e "ACCEPT_EULA=Y" -e 'SA_PASSWORD=StrongP@ssw0rd!' --platform linux/amd64 -p 1433:1433 --name sqlserver -d mcr.microsoft.com/mssql/server:2022-latest
+```
+
+* The use this in the `appsettings.json`
+```json
+{
+
+"ConnectionStrings": {
+  "DefaultConnection": "Server=localhost,1433;Database=JwtAuthDb;User Id=sa;Password=StrongP@ssw0rd!;TrustServerCertificate=True;"
+},
+  "AppSettings": {
+    "Token": "uf/UXIEkwBTLZTHZQqBTTWHxZj4g2WW8KeAEYMZFhKBIZSiyCo1283zg1tneGTPb3B4N1JkG8/JkHjp+u1zgqg==",
+    "Issuer": "haris18896",
+    "Audience": "haris18896"
+  }
+}
 ```
 
 ```cs
@@ -28,6 +52,7 @@ builder.Services.AddControllers();
 
 // 🔧 Add OpenAPI support
 builder.Services.AddOpenApi();  // you can add version param to this as well e.g // 🔧 builder.Services.AddOpenApi("v2");
+builder.Services.AddDbContext<UserDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"))); // database connection
 // ........
 // ........
 // ........
@@ -49,6 +74,9 @@ app.Run();
 dotnet add package Scalar.AspNetCore --version 2.6.6 # easy way to render beautiful API References based on OpenAPI/Swagger documents
 dotnet add package System.IdentityModel.Tokens.Jwt --version 8.13.0 # this library simplifies working with OpenID Connect (OIDC), OAuth2.0, and JSON Web Tokens (JWT) in .NET.
 dotnet add package Microsoft.EntityFrameworkCore # Entity Framework Core (EF Core) is a modern object-database mapper that lets you build a clean, portable, and high-level data access layer with .NET (C#) across a variety of databases
+
+dotnet add package Microsoft.EntityFrameworkCore.Tools
+dotnet add package Microsoft.EntityFrameworkCore.SqlServer
 
 ```
 
